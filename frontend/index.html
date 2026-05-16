@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>课堂会议纪要生成工具</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="top-bar">
+    <div class="brand">
+      <span class="spike" aria-hidden="true">✱</span>
+      <span class="brand-name">课堂会议纪要工具</span>
+      <span class="brand-tag">Speech Minutes</span>
+    </div>
+
+    <div class="top-actions">
+      <span id="status-dot" class="status-dot" data-state="idle" title="待机"></span>
+      <span id="status-text" class="status-text">待机</span>
+      <button id="btn-record" class="btn btn-primary" type="button">
+        <span class="btn-dot"></span>
+        <span class="btn-label">开始录音</span>
+      </button>
+      <button id="btn-reset" class="btn btn-secondary" type="button">重置</button>
+    </div>
+  </header>
+
+  <section class="speaker-bar">
+    <span class="speaker-label">说话人</span>
+    <div id="speaker-list" class="speaker-list">
+      <button class="speaker-chip is-active" data-speaker="老师">老师</button>
+      <button class="speaker-chip" data-speaker="学生A">学生A</button>
+      <button class="speaker-chip" data-speaker="学生B">学生B</button>
+    </div>
+    <button id="btn-add-speaker" class="btn-ghost" type="button">+ 添加说话人</button>
+    <span class="speaker-hint">点击切换当前发言者,后续转写自动归属</span>
+  </section>
+
+  <main class="workspace">
+    <!-- 左:实时转写 -->
+    <section class="panel transcript-panel">
+      <header class="panel-head">
+        <div class="panel-title-group">
+          <span class="panel-eyebrow">LIVE TRANSCRIPT</span>
+          <h2 class="panel-title">实时转写</h2>
+        </div>
+        <div class="panel-meta">
+          <span id="duration">00:00</span>
+          <span class="dot-sep">·</span>
+          <span id="word-count">0 字</span>
+        </div>
+      </header>
+
+      <div id="transcript" class="transcript">
+        <div class="empty-state">
+          <p class="empty-title">尚未开始</p>
+          <p class="empty-desc">点击右上角"开始录音",转写文本将实时出现在这里</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 右:AI 纪要 -->
+    <aside class="panel summary-panel">
+      <header class="panel-head">
+        <div class="panel-title-group">
+          <span class="panel-eyebrow">AI MEETING MINUTES</span>
+          <h2 class="panel-title">智能纪要</h2>
+        </div>
+      </header>
+
+      <div id="summary" class="summary">
+        <div class="empty-state">
+          <p class="empty-title">等待生成</p>
+          <p class="empty-desc">录音结束后,点击下方按钮生成结构化纪要</p>
+        </div>
+      </div>
+
+      <footer class="panel-actions">
+        <button id="btn-generate" class="btn btn-primary btn-block" type="button" disabled>
+          一键生成会议纪要
+        </button>
+        <div class="action-row">
+          <div class="dropdown">
+            <button id="btn-export" class="btn btn-secondary" type="button" disabled>
+              <span>导出</span>
+              <span class="dropdown-arrow" aria-hidden="true">▾</span>
+            </button>
+            <div id="export-menu" class="dropdown-menu" hidden>
+              <button class="dropdown-item" data-format="md" type="button">
+                <span class="dropdown-item-label">Markdown</span>
+                <span class="dropdown-item-ext">.md</span>
+              </button>
+              <button class="dropdown-item" data-format="doc" type="button">
+                <span class="dropdown-item-label">Word 文档</span>
+                <span class="dropdown-item-ext">.doc</span>
+              </button>
+              <button class="dropdown-item" data-format="txt" type="button">
+                <span class="dropdown-item-label">纯文本</span>
+                <span class="dropdown-item-ext">.txt</span>
+              </button>
+            </div>
+          </div>
+          <button id="btn-copy" class="btn btn-secondary" type="button" disabled>
+            复制全文
+          </button>
+        </div>
+      </footer>
+    </aside>
+  </main>
+
+  <footer class="page-footer">
+    <span>数字语音处理课程项目 · 2026</span>
+    <span class="footer-dot">·</span>
+    <span>本页为前端 UI 演示,语音识别与摘要生成接口尚未接入</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
