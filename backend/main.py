@@ -25,8 +25,6 @@ app.add_middleware(
 )
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
-if FRONTEND_DIR.exists():
-    app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 
 class SummaryRequest(BaseModel):
@@ -45,6 +43,16 @@ async def index():
     if html.exists():
         return FileResponse(str(html))
     return {"message": "课堂会议纪要工具 API"}
+
+
+@app.get("/style.css")
+async def css():
+    return FileResponse(str(FRONTEND_DIR / "style.css"), media_type="text/css")
+
+
+@app.get("/app.js")
+async def js():
+    return FileResponse(str(FRONTEND_DIR / "app.js"), media_type="application/javascript")
 
 
 @app.get("/api/health")
