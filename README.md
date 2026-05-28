@@ -26,11 +26,15 @@
 
 ```
 .
-├── frontend/              # 前端 UI(已完成 mock demo)
+├── frontend/              # 前端 UI
 │   ├── index.html
 │   ├── style.css
 │   └── app.js
-├── backend/               # 后端服务(待开发)
+├── backend/               # 后端服务
+│   ├── main.py            # FastAPI 主应用
+│   ├── config.py          # 配置管理
+│   ├── transcription.py   # ASR 转写 (faster-whisper)
+│   ├── summarizer.py      # 纪要生成 (智谱 GLM)
 │   ├── requirements.txt
 │   └── .env.example
 ├── docs/                  # 项目设计文档
@@ -43,16 +47,33 @@
 
 - [x] 项目方案设计 (见 `docs/`)
 - [x] 前端 UI Mock Demo (双栏布局 + 流式转写 + 三格式导出)
-- [ ] 后端 FastAPI 骨架
-- [ ] faster-whisper 实时转录接入
-- [ ] GLM-3 摘要生成接入
-- [ ] 端到端联调
+- [x] 后端 FastAPI 服务 (WebSocket + REST API)
+- [x] faster-whisper 实时转录接入
+- [x] GLM 摘要生成接入 (智谱 GLM-4-Flash)
+- [x] 端到端联调
 - [ ] 项目报告
 - [ ] 5 分钟演示视频
 
 ## 快速开始
 
-### 前端 Demo (无需依赖)
+### 一键启动 (推荐)
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate     # Windows
+pip install -r requirements.txt
+cp .env.example .env       # 可选: 填入智谱 API key 启用真实摘要生成
+python main.py
+```
+
+然后浏览器打开 http://127.0.0.1:8000
+
+### 仿真模式
+
+不安装 faster-whisper 也可运行 — 将 `.env` 中设 `SIMULATION_MODE=true`，系统会使用模拟数据演示完整流程。
+
+### 前端独立 Demo (无需后端)
 
 ```bash
 # 直接双击打开
@@ -61,20 +82,9 @@ frontend/index.html
 
 操作:
 1. 点击右上角"开始录音"(或按空格)
-2. 转写文本会按预设脚本流式出现
+2. 转写文本会实时出现 (仿真模式使用预设脚本)
 3. 录音停止后点"一键生成会议纪要"
 4. 通过底部"导出"下拉选择 Markdown / Word / 纯文本 下载
-
-### 后端(待开发)
-
-```bash
-cd backend
-python -m venv .venv
-.venv/Scripts/activate  # Windows
-pip install -r requirements.txt
-cp .env.example .env    # 填入 GLM API key
-uvicorn main:app --reload
-```
 
 ## 协作约定
 

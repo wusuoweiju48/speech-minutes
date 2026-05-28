@@ -1,14 +1,15 @@
 # Web 框架
-fastapi==0.115.0
-uvicorn[standard]==0.30.6
-python-multipart==0.0.9
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.9
 
 # 语音识别
-faster-whisper==1.0.3
+faster-whisper>=1.0.3
 
 # LLM 摘要 (智谱 GLM)
-zhipuai==2.1.5
+zhipuai>=2.1.0
 
 # 工具
-python-dotenv==1.0.1
-numpy==1.26.4
+python-dotenv>=1.0.0
+numpy>=1.26.0
+pydantic-settings>=2.0.0
