@@ -56,7 +56,7 @@ def generate_summary(transcript: str) -> dict:
                 "Content-Type": "application/json",
             },
             json={
-                "model": "glm-4-flash",
+                "model": "glm-4.7-flash",
                 "messages": [{"role": "user", "content": PROMPT.format(transcript=transcript)}],
                 "temperature": 0.7,
                 "max_tokens": 1024,
