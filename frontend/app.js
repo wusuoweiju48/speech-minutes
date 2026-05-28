@@ -163,16 +163,45 @@ async function startRecording() {
 
 async function startRealRecording() {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true } });
-    const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm";
-    state.mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
-    state.mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0 && state.ws && state.ws.readyState === WebSocket.OPEN) {
-        e.data.arrayBuffer().then((buf) => state.ws.send(buf));
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+    const source = audioCtx.createMediaStreamSource(stream);
+    const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+
+    state.audioCtx = audioCtx;
+    state.audioStream = stream;
+    state.audioProcessor = processor;
+    state.pcmBuffer = new Int16Array(0);
+
+    processor.onaudioprocess = (e) => {
+      if (!state.isRecording) return;
+      const float32 = e.inputBuffer.getChannelData(0);
+      // float32 转 int16
+      const int16 = new Int16Array(float32.length);
+      for (let i = 0; i < float32.length; i++) {
+        const s = Math.max(-1, Math.min(1, float32[i]));
+        int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+      // 拼接缓冲区
+      const newBuf = new Int16Array(state.pcmBuffer.length + int16.length);
+      newBuf.set(state.pcmBuffer);
+      newBuf.set(int16, state.pcmBuffer.length);
+      state.pcmBuffer = newBuf;
+
+      // 每 3 秒（48000 样本 @16kHz）发送一次
+      if (state.pcmBuffer.length >= 16000 * 3) {
+        const chunk = state.pcmBuffer.buffer;
+        state.pcmBuffer = new Int16Array(0);
+        if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+          state.ws.send(chunk);
+        }
       }
     };
-    state.mediaRecorder.start(3000);
+
+    source.connect(processor);
+    processor.connect(audioCtx.destination);
   } catch (err) {
+    console.error("麦克风错误:", err);
     toast("麦克风权限被拒绝");
     stopRecording();
   }
@@ -183,6 +212,10 @@ function stopRecording() {
   clearInterval(state.timerInterval);
   clearTimeout(state.mockTimer);
 
+  // 停止 Web Audio
+  if (state.audioProcessor) { state.audioProcessor.disconnect(); state.audioProcessor = null; }
+  if (state.audioCtx) { state.audioCtx.close(); state.audioCtx = null; }
+  if (state.audioStream) { state.audioStream.getTracks().forEach((t) => t.stop()); state.audioStream = null; }
   if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
     state.mediaRecorder.stop();
     state.mediaRecorder.stream.getTracks().forEach((t) => t.stop());
@@ -208,6 +241,9 @@ function resetAll() {
   clearTimeout(state.mockTimer);
   if (state.ws) { state.ws.close(); state.ws = null; }
   state.isConnected = false;
+  if (state.audioProcessor) { state.audioProcessor.disconnect(); state.audioProcessor = null; }
+  if (state.audioCtx) { state.audioCtx.close(); state.audioCtx = null; }
+  if (state.audioStream) { state.audioStream.getTracks().forEach((t) => t.stop()); state.audioStream = null; }
   if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
     state.mediaRecorder.stop();
     state.mediaRecorder.stream.getTracks().forEach((t) => t.stop());

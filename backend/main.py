@@ -1,6 +1,10 @@
 import json
 import logging
+import os
 from pathlib import Path
+
+# 设置 HuggingFace 镜像（国内网络）— 必须在 import config 之前
+os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -77,6 +81,11 @@ async def ws_transcribe(ws: WebSocket):
         while True:
             msg = await ws.receive()
 
+            # 检查断开消息
+            if msg.get("type") == "websocket.disconnect":
+                logger.info("WebSocket disconnected (client)")
+                break
+
             if "text" in msg:
                 try:
                     data = json.loads(msg["text"])
@@ -99,10 +108,13 @@ async def ws_transcribe(ws: WebSocket):
 
             elif "bytes" in msg:
                 buf.extend(msg["bytes"])
+                logger.info("收到音频数据: %d 字节, 缓冲区: %d / %d", len(msg["bytes"]), len(buf), CHUNK)
                 while len(buf) >= CHUNK:
                     chunk = bytes(buf[:CHUNK])
                     buf = buf[CHUNK:]
+                    logger.info("开始转写 %d 字节音频...", len(chunk))
                     text = transcribe_audio(chunk)
+                    logger.info("转写结果: %s", text[:100] if text else "(空)")
                     if text:
                         await ws.send_json({"type": "transcript", "text": text})
 
