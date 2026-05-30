@@ -113,12 +113,14 @@ function connectWebSocket() {
       state.ws.onmessage = (e) => {
         try {
           const d = JSON.parse(e.data);
+          console.log("[WS] received:", d);
           if (d.type === "transcript" && d.text) {
             state.transcript.push({ speaker: state.currentSpeaker, text: d.text, time: Date.now() });
             appendTranscriptLine(state.currentSpeaker, d.text);
             updateWordCount();
+            els.btnGenerate.disabled = false;  // 有转写内容就启用按钮
           }
-        } catch {}
+        } catch (err) { console.error("[WS] parse error:", err); }
       };
       state.ws.onclose = () => { state.isConnected = false; if (state.isRecording) { stopRecording(); toast("与后端断开连接"); } showConnectionStatus(false, false); };
       state.ws.onerror = () => { state.isConnected = false; showConnectionStatus(false, false); resolve(false); };
@@ -229,7 +231,7 @@ function stopRecording() {
   els.btnRecord.classList.remove("is-recording");
   els.btnRecord.querySelector(".btn-label").textContent = "继续录音";
   setStatus("stopped", "已停止");
-  if (state.transcript.length > 0) els.btnGenerate.disabled = false;
+  els.btnGenerate.disabled = false;
   toast("录音已停止");
 }
 

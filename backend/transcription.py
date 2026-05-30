@@ -3,6 +3,8 @@ import os
 import struct
 import tempfile
 
+import numpy as np
+
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -18,22 +20,13 @@ def _load_model():
     _model_load_attempted = True
 
     try:
-        from faster_whisper import WhisperModel
+        import whisper
 
-        logger.info(
-            "Loading faster-whisper: %s (device=%s, compute=%s)",
-            settings.whisper_model_size,
-            settings.whisper_device,
-            settings.whisper_compute_type,
-        )
-        _model = WhisperModel(
-            settings.whisper_model_size,
-            device=settings.whisper_device,
-            compute_type=settings.whisper_compute_type,
-        )
-        logger.info("faster-whisper loaded")
+        logger.info("Loading openai-whisper: %s", settings.whisper_model_size)
+        _model = whisper.load_model(settings.whisper_model_size)
+        logger.info("openai-whisper loaded")
     except Exception as e:
-        logger.warning("faster-whisper unavailable: %s — using simulation", e)
+        logger.warning("openai-whisper unavailable: %s — using simulation", e)
         _model = None
 
     return _model
@@ -60,6 +53,35 @@ _SIM = [
 ]
 _sim_i = 0
 
+# Whisper 对静音/噪音常见的幻觉输出
+_HALLUCINATION_PATTERNS = [
+    "字幕by索兰娅",
+    "字幕 by 索兰娅",
+    "谢谢观看",
+    "Thank you for watching",
+    "请订阅",
+]
+
+
+def _is_silence(pcm: bytes, threshold: float = 500.0) -> bool:
+    """检测 PCM 音频是否为静音/噪音（RMS 能量低于阈值）"""
+    samples = np.frombuffer(pcm, dtype=np.int16)
+    if len(samples) == 0:
+        return True
+    rms = np.sqrt(np.mean(samples.astype(np.float64) ** 2))
+    return rms < threshold
+
+
+def _is_hallucination(text: str) -> bool:
+    """检测是否为 Whisper 幻觉输出"""
+    for pat in _HALLUCINATION_PATTERNS:
+        if pat in text:
+            return True
+    # 过滤纯重复字符（如 "谢谢谢谢谢谢..."）
+    if len(text) >= 4 and len(set(text)) <= 2:
+        return True
+    return False
+
 
 def transcribe_audio(audio_bytes: bytes) -> str:
     global _sim_i
@@ -77,14 +99,26 @@ def transcribe_audio(audio_bytes: bytes) -> str:
 
     wav = audio_bytes if audio_bytes[:4] == b"RIFF" else _pcm_to_wav(audio_bytes)
 
+    # 静音检测：提取 PCM 数据检查能量
+    if audio_bytes[:4] == b"RIFF":
+        pcm_data = audio_bytes[44:]  # 跳过 WAV header
+    else:
+        pcm_data = audio_bytes
+    if _is_silence(pcm_data):
+        logger.info("Skipped: silence detected")
+        return ""
+
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
         f.write(wav)
         path = f.name
 
     try:
-        segs, info = model.transcribe(path, language="zh", beam_size=5)
-        text = "".join(s.text for s in segs).strip()
-        logger.info("Transcribed (%.1fs): %s", info.duration, text[:80])
+        result = model.transcribe(path, language="zh", fp16=False)
+        text = result["text"].strip()
+        if _is_hallucination(text):
+            logger.info("Filtered hallucination: %s", text[:40])
+            return ""
+        logger.info("Transcribed: %s", text[:80])
         return text
     except Exception as e:
         logger.error("Transcription error: %s", e)

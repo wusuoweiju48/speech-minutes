@@ -3,7 +3,8 @@ import logging
 import os
 from pathlib import Path
 
-# 设置 HuggingFace 镜像（国内网络）— 必须在 import config 之前
+# 设置 UTF-8 编码 + HuggingFace 镜像 — 必须在 import config 之前
+os.environ.setdefault("PYTHONUTF8", "1")
 os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
